@@ -12,10 +12,12 @@ This site is a lightweight public knowledge base. It starts with Agent notes and
 
 ## Recent Notes
 
+- [SkVM 论文解读](./agent/skvm-paper-reading.md)
+- [AutoCLI 调研报告](./agent/autocli-research-report.md)
 - [Getting Started With Agents](./agent/getting-started.md)
 - [Agent Concepts](./agent/concepts.md)
 - [Agent Tools](./agent/tools.md)
 
 ## Publish
 
-This site is intended for GitHub Pages deployment from the root of the `main` branch in the `ChenYangng.github.io` repository.
+This site is intended for GitHub Pages deployment from the root of the `main` branch in the `chenyangng.github.io` repository.

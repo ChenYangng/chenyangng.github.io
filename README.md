@@ -16,7 +16,7 @@ Once published, the site URL will be:
 
 ## GitHub Pages Setup
 
-After pushing this repository to GitHub as `ChenYangng.github.io`:
+After pushing this repository to GitHub as `chenyangng.github.io`:
 
 1. Open repository settings.
 2. Open the `Pages` section.
