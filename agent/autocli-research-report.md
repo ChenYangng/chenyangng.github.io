@@ -90,25 +90,89 @@ pipeline = 命令内部的执行步骤
 
 Pipeline 是一个顺序执行的数据管道。每一步接收上一阶段的数据，处理后传给下一步。
 
-常见 Pipeline 步骤如下：
+从代码注册情况看，当前 Pipeline 定义了 19 个 step：
 
-| 步骤 | 作用 |
-|---|---|
-| `fetch` | 发送 HTTP 请求并解析 JSON |
-| `select` | 从 JSON 中选择某个嵌套路径 |
-| `map` | 将原始数据映射成输出对象 |
-| `filter` | 过滤无效或不需要的数据 |
-| `sort` | 对结果排序 |
-| `limit` | 限制返回数量 |
-| `navigate` | 浏览器打开页面 |
-| `click` | 点击页面元素 |
-| `type` | 输入文本 |
-| `wait` | 等待时间、文本或选择器 |
-| `evaluate` | 在页面上下文中执行 JavaScript |
-| `screenshot` | 截图 |
-| `intercept` | 拦截匹配的网络请求 |
-| `tap` | 触发前端 store action，如 Pinia 或 Vuex |
-| `download` | 下载媒体或文章内容 |
+| 类别 | 步骤 | 作用 | 是否需要浏览器 |
+|---|---|---|---:|
+| 数据处理 | `select` | 从 JSON 中选择嵌套路径，如 `data.items[0]` | 否 |
+| 数据处理 | `map` | 将数组或对象映射成新的输出结构 | 否 |
+| 数据处理 | `filter` | 按表达式过滤数组元素 | 否 |
+| 数据处理 | `sort` | 按字段排序，支持升序和降序 | 否 |
+| 数据处理 | `limit` | 截断结果数量 | 否 |
+| HTTP 请求 | `fetch` | 发送 HTTP 请求，支持 `url`、`method`、`headers`、`body`、`params` | 否 |
+| 浏览器操作 | `navigate` | 在浏览器中打开页面，并等待页面稳定 | 是 |
+| 浏览器操作 | `click` | 点击页面 CSS selector | 是 |
+| 浏览器操作 | `type` | 向指定输入框输入文本 | 是 |
+| 浏览器操作 | `wait` | 等待时间、selector 或文本出现 | 是 |
+| 浏览器操作 | `press` | 触发键盘事件，如 `Enter` | 是 |
+| 浏览器操作 | `evaluate` | 在页面上下文中执行 JavaScript | 是 |
+| 浏览器操作 | `snapshot` | 获取页面结构快照，可用于提取 DOM/可见内容 | 是 |
+| 浏览器操作 | `screenshot` | 截图，返回 base64 或保存到指定路径 | 是 |
+| 浏览器操作 | `scroll` | 自动滚动页面，用于触发懒加载或分页加载 | 是 |
+| 网络拦截 | `intercept` | 安装请求拦截器，捕获匹配 URL 的网络请求 | 是 |
+| 网络拦截 | `collect` | 收集已拦截请求，并用 JS `parse` 函数处理 | 是 |
+| 前端状态 | `tap` | 调用 Pinia/Vuex store action，并捕获对应网络响应 | 是 |
+| 下载 | `download` | 下载媒体、文章，或调用 `yt-dlp` 下载视频 | 通常是 |
+
+这些动作可以按执行环境理解：
+
+```text
+纯数据处理：select / map / filter / sort / limit
+网络请求：fetch
+浏览器页面：navigate / click / type / wait / press / evaluate / snapshot / screenshot / scroll
+浏览器网络：intercept / collect
+前端状态桥接：tap
+下载：download
+```
+
+其中 `fetch` 支持三种常见模式：
+
+```yaml
+- fetch: https://api.example.com/items
+
+- fetch:
+    url: https://api.example.com/search
+    method: GET
+    params:
+      q: "${{ args.keyword }}"
+    headers:
+      accept: application/json
+
+- fetch:
+    url: https://api.example.com/items/${{ item.id }}
+```
+
+如果上一步数据是数组，并且 `fetch` URL 引用了 `item`，AutoCLI 会进入逐项并发请求模式。
+
+浏览器侧的动作通常依赖 Chrome 扩展、本地 daemon 和页面上下文。例如：
+
+```yaml
+pipeline:
+  - navigate: https://example.com
+  - wait:
+      selector: ".item"
+  - scroll:
+      count: 3
+      delay: 300
+  - evaluate: |
+      Array.from(document.querySelectorAll(".item")).map(el => ({
+        title: el.innerText
+      }))
+```
+
+网络拦截可以拆成“安装拦截”和“收集处理”两段：
+
+```yaml
+pipeline:
+  - navigate: https://example.com
+  - intercept:
+      pattern: "/api/feed"
+      collect: false
+  - click: ".load-more"
+  - collect:
+      parse: |
+        (requests) => requests.flatMap(r => r.response?.data?.items || [])
+```
 
 Pipeline 表达式使用类似模板语法：
 
@@ -175,7 +239,69 @@ autocli generate "https://example.com" --goal hot
 收藏 -> favorite
 ```
 
-如果用户随意填写 `latest`、`products`、`jobs` 这类未内置的 goal，规则版不一定能理解其语义。它可能会把这个词作为命令名或候选偏好，但不会自动推断出复杂需求。规则生成适合结构简单、接口明显、字段清晰的网站。
+`goal` 的作用主要有三点：
+
+| 作用 | 说明 |
+|---|---|
+| 能力命名 | 如果用户传了 goal，生成出的 adapter 名称可能直接使用这个 goal |
+| 候选匹配 | 在多个候选 endpoint 中优先选择与 goal 更接近的能力 |
+| 参数推断 | 对少数内置 goal 有特殊逻辑，例如 `search` 会优先选择带搜索参数的 endpoint，并推荐 `keyword` 参数 |
+
+需要注意的是，`goal` 不是现有命令的全集，也不是完整自然语言理解系统。AutoCLI 现有 adapter 里可以有 `download`、`post`、`reply-dm`、`creator-stats`、`quote`、`add-to-cart` 等命令名，但规则生成阶段内置的规范 goal 主要是上表 9 个。
+
+规则版的 goal 匹配机制可以简化理解为：
+
+```text
+用户输入 goal
+-> trim + lowercase
+-> 按别名表顺序做 contains 匹配
+-> 命中则返回规范 goal
+-> 未命中则不做规范化
+```
+
+如果用户没有传 goal，AutoCLI 会尝试从 endpoint URL 推断能力名：
+
+| URL 特征 | 推断能力 |
+|---|---|
+| 包含 `hot`、`popular`、`ranking`、`trending` | `hot` |
+| 包含 `search` | `search` |
+| 包含 `feed`、`timeline`、`dynamic` | `feed` |
+| 包含 `comment`、`reply` | `comments` |
+| 包含 `history` | `history` |
+| 包含 `profile`、`userinfo`、`/me` | `me` |
+| 包含 `favorite`、`collect`、`bookmark` | `favorite` |
+| 其他情况 | 使用 URL 最后一个有意义路径段，或退回到 `data` |
+
+如果用户填写 `latest`、`products`、`jobs`、`add-to-cart` 这类未内置 goal，当前规则版通常不会理解其完整语义，但原始 goal 不会被丢弃。它可能被用作 adapter 名称或候选偏好。
+
+以 `add-to-cart` 为例：
+
+```bash
+autocli generate "https://example.com/product/1" --goal add-to-cart
+```
+
+当前规则版的行为大致是：
+
+```text
+add-to-cart 不在规范 goal 别名表中
+-> normalize_goal 返回空
+-> 原始 goal 继续传给合成逻辑
+-> 生成出的 adapter 名称可能叫 add-to-cart
+-> 但规则版未必能自动识别“加入购物车”的接口语义
+```
+
+也就是说，它可能生成一个名为 `add-to-cart` 的 adapter，但不保证选中的 endpoint 就是真正的加购物车接口。除非页面探索时刚好捕获到很明显的接口，例如 `/api/cart/add`、`/cart/add`、`/basket/items`，并且字段结构足够清晰。
+
+如果要让规则版稳定支持 `add-to-cart` 这类动作型 goal，需要新增专门规则：
+
+- 将 `add-to-cart`、`add_to_cart`、`cart_add`、`加入购物车`、`加购` 加入 goal 别名。
+- endpoint 选择优先匹配 `cart/add`、`add-to-cart`、`basket`、`checkout/cart`。
+- 方法优先识别 `POST`。
+- 参数优先识别 `productId`、`skuId`、`itemId`、`quantity`。
+- 策略优先考虑 `cookie` 或 `header`，因为加购物车通常需要登录态和 CSRF token。
+- 动作类能力应默认标记为需要用户确认或至少需要显式授权。
+
+因此，规则生成适合结构简单、接口明显、字段清晰的网站；复杂动作型 goal 更适合 AI 生成或人工手写后再沉淀为规则。
 
 ### 3.2 AI 生成
 
