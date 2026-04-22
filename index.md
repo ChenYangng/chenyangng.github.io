@@ -12,6 +12,7 @@ This site is a lightweight public knowledge base. It starts with Agent notes and
 
 ## Recent Notes
 
+- [GenericAgent 技术分析报告](./agent/genericagent-technical-report.md)
 - [SkVM 论文解读](./agent/skvm-paper-reading.md)
 - [AutoCLI 调研报告](./agent/autocli-research-report.md)
 - [Getting Started With Agents](./agent/getting-started.md)
