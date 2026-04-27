@@ -4,10 +4,10 @@
 
 现有 GUI 操控系统大多依赖以下输入之一：
 
-- 原始控件树（Accessibility Tree / Semantics Tree / DOM）
+- 原始控件树及节点属性（Accessibility Tree / Semantics Tree / DOM，包括 role/type、text、accessibility label、clickable、enabled、bounds、state 等）
 - 屏幕截图
-- OCR 结果
-- 规则化控件属性（text、content-desc、clickable 等）
+- 视觉补充信息（OCR、图标识别、目标检测、图片/区域语义等）
+- 交互与状态变化信号（点击、滚动、输入，以及动作前后的页面变化）
 
 这些输入虽然能支持基础自动化，但对 GUI Agent 仍然存在明显不足：
 
@@ -86,12 +86,23 @@
 
 语义化控件树不应只依赖单一控件树，而应融合多源观测：
 
-- 原始控件树 / Accessibility Tree / Semantics Tree
+- 原始控件树 / Accessibility Tree / Semantics Tree / DOM 及其节点属性
 - 界面截图
-- OCR 结果
-- 目标检测结果
-- 图标识别结果
-- 输入事件与状态变化信号
+- OCR 文本识别结果
+- 目标检测与区域分割结果
+- 图标识别与图片语义结果
+- 交互事件与状态变化信号
+
+其中，节点属性通常属于原始控件树的一部分，例如 `text`、`content-desc`、`accessibility label`、`clickable`、`enabled`、`focused`、`bounds` 等。这里单独强调“节点属性”，是为了说明后续规范化阶段不仅使用树结构，也使用节点上的可访问性字段和状态字段。
+
+“交互事件与状态变化信号”不是另一种静态页面输入，而是围绕一次操作记录的运行时信号，例如：
+
+- 用户或 Agent 的点击、长按、滚动、输入、返回等事件
+- 动作发生前后的控件树 diff、截图 diff、窗口/页面标识变化
+- 输入焦点变化、弹窗出现或消失、toast/loading 状态、列表滚动位置变化
+- 如果系统能感知执行结果，还可以包括动作成功、失败、超时、被拦截等回执
+
+这些信号主要用于推断动作语义和动作后果，例如 `tap card_body -> open_detail`、`tap close_icon -> dismiss_overlay`。
 
 ### 4.2 目标
 
@@ -99,9 +110,13 @@
 
 - 控件树中不存在的文本
 - 图标的语义含义
-- 图片中的业务语义
-- 控件树未显式表达的区域边界
+- 图片、视频帧或商品图中的业务语义
+- 控件树未显式表达的视觉区域边界
 - 页面变化和动作回执信号
+
+“控件树未显式表达的视觉区域边界”指的是：界面上看起来属于同一个区域或对象，但原始控件树没有直接给出这个区域。例如，一个商品卡片可能由图片、标题、价格、店铺名、标签和按钮等多个节点组成，控件树里未必有一个干净的 `product_card` 容器节点。此时需要结合 bbox、布局、截图和视觉检测结果推断“这些节点共同构成一个卡片区域”。
+
+“页面变化和动作回执信号”指的是动作执行后的结果观测，例如点击某个节点后是否进入新页面、是否弹出弹窗、是否关闭浮层、是否只是选中某个 tab、是否出现错误提示。这类信号是构建 Action Graph 和执行反馈回流的关键依据。
 
 ### 4.3 产物
 
@@ -109,10 +124,17 @@
 {
   "tree": "...",
   "screenshot": "...",
-  "ocr": [...],
-  "detections": [...],
-  "icons": [...],
-  "signals": [...]
+  "visual": {
+    "ocr": [],
+    "detections": [],
+    "icons": [],
+    "image_tags": []
+  },
+  "signals": {
+    "input_events": [],
+    "state_changes": [],
+    "action_feedback": []
+  }
 }
 ```
 
