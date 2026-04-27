@@ -71,12 +71,12 @@
 
 - 图 1：语义化控件树架构图
   该图对应本方案的主处理链路，展示了从真实界面样例出发，如何经过 `Observation Pack`、`Normalized Tree`、`Semantic Object Graph`、`Action Graph` 等阶段，逐步完成语义化提升。
-![[huawei_jd_product_card_architecture_generic_schema.svg]]
+![语义化控件树架构图](../assets/huawei_jd_product_card_architecture_generic_schema.svg)
 
 
 - 图 2：鸿蒙语义服务层分层落位图
   该图对应本方案在鸿蒙系统中的工程落位方式，说明语义服务层如何连接上层调用方、语义处理链路，以及下层鸿蒙系统组件与渲染框架。
-![[harmonyos_semantic_ui_parallel_domains.svg]]
+![鸿蒙语义服务层分层落位图](../assets/harmonyos_semantic_ui_parallel_domains.svg)
 
 ---
 
