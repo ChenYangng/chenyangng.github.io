@@ -10,6 +10,7 @@ Notes about Agent systems, from first principles to tools and workflows.
 4. [AutoCLI 调研报告](./autocli-research-report.md)
 5. [SkVM 论文解读](./skvm-paper-reading.md)
 6. [GenericAgent 技术分析报告](./genericagent-technical-report.md)
+7. [GUI 语义记忆系统与语义化控件树技术方案设计](./semantic_ui_tree_technical_design.md)
 
 ## Notes In This Section
 
@@ -19,3 +20,4 @@ Notes about Agent systems, from first principles to tools and workflows.
 - [GenericAgent 技术分析报告](./genericagent-technical-report.md) - 分析 GenericAgent 的架构、工具系统、真实浏览器控制、分层记忆与自我进化机制。
 - [AutoCLI 调研报告](./autocli-research-report.md) - 研究 AutoCLI 的 adapter 模型、YAML Pipeline、生成流程、策略差异，以及鸿蒙原生应用的能力边界。
 - [SkVM 论文解读](./skvm-paper-reading.md) - 解读 SkVM 如何把 Agent skill 当作可编译、可适配、可运行的自然语言程序。
+- [GUI 语义记忆系统与语义化控件树技术方案设计](./semantic_ui_tree_technical_design.md) - 总结 GUI 语义记忆系统的端云数据体系、语义化控件树、运行时匹配、离线语义编译和隐私边界。
